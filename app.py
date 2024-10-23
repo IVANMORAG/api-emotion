@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import numpy as np
 import pandas as pd
@@ -19,7 +19,7 @@ port = int(os.environ.get("PORT", 5000))  # Usa el puerto proporcionado por Rend
 # Ruta de bienvenida
 @app.route('/')
 def home():
-    return "Bienvenido a mi API!"
+    return render_template('index.html')
 
 # Carga el modelo
 model_path = 'modelo.keras'
@@ -28,20 +28,21 @@ model = load_model(model_path)
 # Carga el DataFrame con los puntos faciales clave
 keyfacial_df = pd.read_csv('data.csv')
 
-def decode_base64_image(image_str):
+def decode_image(image_string):
     try:
-        # Añade padding si es necesario
-        missing_padding = len(image_str) % 4
-        if missing_padding:
-            image_str += '=' * (4 - missing_padding)
-
-        return np.frombuffer(base64.b64decode(image_str), dtype=np.uint8).reshape(96, 96)
+        image_string = image_string.strip()  # Elimina espacios en blanco
+        image_data = np.frombuffer(base64.b64decode(image_string), dtype=np.uint8)
+        if image_data.size == 9216:  # 96*96
+            return image_data.reshape(96, 96)
+        else:
+            print(f"Error: tamaño de la imagen inesperado: {image_data.size}")
+            return None
     except Exception as e:
-        print(f'Error decoding image: {e}')
-        return np.zeros((96, 96), dtype=np.uint8)  # Devuelve una imagen en blanco si hay un error
+        print(f"Error al decodificar la imagen: {e}")
+        return None
 
-# Convierte las cadenas de texto de las imágenes a matrices
-keyfacial_df['Image'] = keyfacial_df['Image'].apply(decode_base64_image)
+# Convertir las cadenas de texto de las imágenes a matrices
+keyfacial_df['Image'] = keyfacial_df['Image'].apply(decode_image)
 
 @app.route('/predict', methods=['POST'])
 def predict():
