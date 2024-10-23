@@ -14,7 +14,12 @@ app = Flask(__name__)
 CORS(app)  # Habilita CORS para toda la aplicación
 
 # Configura el puerto
-port = int(os.environ.get("PORT", 5000)) 
+port = int(os.environ.get("PORT", 5000))  # Usa el puerto proporcionado por Render
+
+# Ruta de bienvenida
+@app.route('/')
+def home():
+    return "Bienvenido a mi API!"
 
 # Carga el modelo
 model_path = 'modelo.keras'
@@ -25,7 +30,7 @@ keyfacial_df = pd.read_csv('data.csv')
 
 # Convertir las cadenas de texto de las imágenes a matrices
 # Asegúrate de que los datos en 'data.csv' estén en el formato correcto
-keyfacial_df['Image'] = keyfacial_df['Image'].apply(lambda x: np.fromstring(x, dtype=int, sep=' ').reshape(96, 96))
+keyfacial_df['Image'] = keyfacial_df['Image'].apply(lambda x: np.frombuffer(base64.b64decode(x), dtype=int).reshape(96, 96))
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -87,4 +92,4 @@ def predict():
     return jsonify(result), 200
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=port)  # Asegúrate de que el puerto sea el correcto
