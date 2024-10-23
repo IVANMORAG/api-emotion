@@ -13,7 +13,7 @@ import os
 app = Flask(__name__)
 
 # Configura CORS para permitir la URL de tu aplicación en Render
-CORS(app, resources={r"/predict": {"origins": "https://api-emotion.onrender.com"}})  # Cambia esto a tu URL de Render
+CORS(app, resources={r"/predict": {"origins": "*"}})
 
 # Configura el puerto
 port = int(os.environ.get("PORT", 5000))  # Usa el puerto proporcionado por Render
