@@ -7,10 +7,14 @@ import cv2
 import base64
 from io import BytesIO
 import matplotlib.pyplot as plt
+import os
 
 # Inicializa la aplicación Flask
 app = Flask(__name__)
 CORS(app)  # Habilita CORS para toda la aplicación
+
+# Configura el puerto
+port = int(os.environ.get("PORT", 5000)) 
 
 # Carga el modelo
 model_path = 'modelo.keras'
