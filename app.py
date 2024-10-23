@@ -28,9 +28,20 @@ model = load_model(model_path)
 # Carga el DataFrame con los puntos faciales clave
 keyfacial_df = pd.read_csv('data.csv')
 
-# Convertir las cadenas de texto de las imágenes a matrices
-# Asegúrate de que los datos en 'data.csv' estén en el formato correcto
-keyfacial_df['Image'] = keyfacial_df['Image'].apply(lambda x: np.frombuffer(base64.b64decode(x), dtype=int).reshape(96, 96))
+def decode_base64_image(image_str):
+    try:
+        # Añade padding si es necesario
+        missing_padding = len(image_str) % 4
+        if missing_padding:
+            image_str += '=' * (4 - missing_padding)
+
+        return np.frombuffer(base64.b64decode(image_str), dtype=np.uint8).reshape(96, 96)
+    except Exception as e:
+        print(f'Error decoding image: {e}')
+        return np.zeros((96, 96), dtype=np.uint8)  # Devuelve una imagen en blanco si hay un error
+
+# Convierte las cadenas de texto de las imágenes a matrices
+keyfacial_df['Image'] = keyfacial_df['Image'].apply(decode_base64_image)
 
 @app.route('/predict', methods=['POST'])
 def predict():
