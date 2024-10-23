@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizador de Imágenes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            text-align: center;
+            padding: 50px;
+        }
+        h1 {
+            color: #343a40;
+        }
+        input[type="file"] {
+            margin: 20px;
+            padding: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #predictedImage {
+            margin-top: 20px;
+            border: 2px solid #007bff;
+            border-radius: 5px;
+            max-width: 100%; /* Responsivo */
+            height: auto;    /* Mantiene la relación de aspecto */
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #343a40;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Sube tu Imagen para Análisis</h1>
+<form id="uploadForm">
+    <input type="file" id="image" accept="image/png, image/jpeg" required>
+    <br>
+    <button type="submit">Analizar Imagen</button>
+</form>
+
+<h2 id="result"></h2>
+<img id="predictedImage" src="" alt="Imagen predicha" style="display:none;"/>
+
+<script>
+    document.getElementById('uploadForm').addEventListener('submit', async function(event) {
+        event.preventDefault(); // Evita que la página se recargue
+
+        const fileInput = document.getElementById('image');
+        const file = fileInput.files[0];
+
+        // Verifica el tipo de archivo
+        if (!file || (file.type !== 'image/png' && file.type !== 'image/jpeg')) {
+            alert('Por favor, sube una imagen en formato PNG o JPEG.');
+            return;
+        }
+
+        // Crea un objeto URL para la imagen (opcional, para vista previa)
+        const imgElement = new Image();
+        imgElement.src = URL.createObjectURL(file);
+
+        imgElement.onload = async function() {
+            // Redimensiona la imagen a 96x96 píxeles
+            const canvas = document.createElement('canvas');
+            canvas.width = 96;
+            canvas.height = 96;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
+
+            // Convierte la imagen redimensionada a un Blob
+            canvas.toBlob(async (blob) => {
+                const formData = new FormData();
+                formData.append('image', blob, 'resized_image.png'); // Asigna un nombre al blob
+
+                try {
+                    const response = await fetch('http://localhost:5000/predict', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta de la API');
+                    }
+
+                    const data = await response.json();
+                    // Muestra la clase predicha y la confianza
+                    document.getElementById('result').innerText = `Predicción: ${data.predicted_class} (Confianza: ${data.confidence.toFixed(2)})`;
+
+                    // Muestra la imagen procesada
+                    const imgPredictedElement = document.getElementById('predictedImage');
+                    imgPredictedElement.src = data.image;  // Establece la imagen de la respuesta
+                    imgPredictedElement.style.display = 'block';  // Muestra la imagen
+                } catch (error) {
+                    document.getElementById('result').innerText = `Error: ${error.message}`;
+                }
+            }, 'image/png');
+        };
+    });
+</script>
+
+</body>
+</html>
