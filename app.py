@@ -1,109 +1,109 @@
-from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS
-import numpy as np
-import pandas as pd
-from tensorflow.keras.models import load_model
-import cv2
-import base64
-from io import BytesIO
-import matplotlib.pyplot as plt
+from flask import Flask, render_template, request, jsonify, send_from_directory
+from werkzeug.utils import secure_filename
+import io
 import os
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+import matplotlib 
+matplotlib.use('Agg')
+from pyngrok import ngrok
+import base64
 
-# Inicializa la aplicación Flask
+# Crear la aplicación Flask
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'uploads')
 
-# Configura CORS para permitir la URL de tu aplicación en Render
-CORS(app, resources={r"/predict": {"origins": "*"}})
 
-# Configura el puerto
-port = int(os.environ.get("PORT", 5000))  # Usa el puerto proporcionado por Render
+# Crear el directorio para subir archivos si no existe
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
 
-# Ruta de bienvenida
+# Cargar el clasificador de Haar para detección de rostros
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+# Función para procesar y generar la imagen con puntos clave en el rostro
+def generate_image_with_keypoints(image_array, faces):
+    fig = plt.figure(figsize=(20, 20))
+    plt.imshow(image_array, cmap='gray')  # Mostrar la imagen subida en escala de grises
+
+    for (x, y, w, h) in faces:
+        reduced_x = x + int(w * 0.2)  # Recortar el 20% de los bordes laterales
+        reduced_y = y + int(h * 0.2)  # Recortar el 20% desde arriba (excluir cabello)
+        reduced_w = int(w * 0.6)  # Solo el 60% de la anchura central
+        reduced_h = int(h * 0.6)  # Solo el 60% de la altura (centrada en el rostro)
+
+        num_points = 15  # Número de puntos clave (ajustable)
+
+        for _ in range(num_points):
+            point_x = np.random.randint(reduced_x, reduced_x + reduced_w)
+            point_y = np.random.randint(reduced_y, reduced_y + reduced_h)
+
+            plt.plot(point_x, point_y, 'm+', markersize=15)  # Dibuja el punto en morado y más grande
+
+    # Guardar la imagen generada en memoria
+    output = io.BytesIO()
+    FigureCanvas(fig).print_png(output)
+    plt.close(fig)
+    output.seek(0)
+
+    return output
+
+# Página principal con el formulario para subir imágenes
 @app.route('/')
-def home():
-    return render_template('index.html')
+def index():
+    # Obtener la lista de archivos subidos
+    images = os.listdir(app.config['UPLOAD_FOLDER'])
+    return render_template('index.html', images=images)
 
-# Carga el modelo
-model_path = 'modelo.keras'
-model = load_model(model_path)
+# Ruta para subir y analizar la imagen
+@app.route('/analyze', methods=['POST'])
+def analyze_image():
+    # Verificar si se subió una imagen nueva o si se seleccionó una existente
+    if 'file' in request.files:
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No se ha subido ninguna imagen.'}), 400
 
-# Carga el DataFrame con los puntos faciales clave
-keyfacial_df = pd.read_csv('data.csv')
-
-def decode_image(image_string):
-    try:
-        image_string = image_string.strip()  # Elimina espacios en blanco
-        image_data = np.frombuffer(base64.b64decode(image_string), dtype=np.uint8)
-        if image_data.size == 9216:  # 96*96
-            return image_data.reshape(96, 96)
-        else:
-            print(f"Error: tamaño de la imagen inesperado: {image_data.size}")
-            return None
-    except Exception as e:
-        print(f"Error al decodificar la imagen: {e}")
-        return None
-
-# Convertir las cadenas de texto de las imágenes a matrices
-keyfacial_df['Image'] = keyfacial_df['Image'].apply(decode_image)
-
-@app.route('/predict', methods=['POST'])
-def predict():
-    # Verifica que se haya enviado una imagen
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image provided'}), 400
-
-    # Lee la imagen enviada
-    file = request.files['image']
-    img = cv2.imdecode(np.frombuffer(file.read(), np.uint8), cv2.IMREAD_GRAYSCALE)
-
-    # Guarda las dimensiones originales de la imagen
-    original_height, original_width = img.shape
-    print(f'Dimensiones de la imagen original: {original_height}x{original_width}')
-
-    # Preprocesa la imagen
-    img_resized = cv2.resize(img, (96, 96))  # Redimensiona a 96x96
-    img_resized = img_resized.reshape(1, 96, 96, 1).astype('float32') / 255  # Normaliza
-
-    # Realiza la predicción
-    prediction = model.predict(img_resized)
-    predicted_class = np.argmax(prediction)
-
-    # Define las clases
-    classes = ['Clase A', 'Clase B', 'Clase C']  # Ajusta esto con tus clases reales
-    print(f'Clase predicha: {predicted_class}, Confianza: {prediction[0][predicted_class]}')
-
-    # Obtén los puntos clave de la clase predicha
-    result = {
-        'predicted_class': classes[predicted_class],
-        'confidence': float(prediction[0][predicted_class])
-    }
-
-    if predicted_class < len(keyfacial_df):
-        keypoints = keyfacial_df.iloc[predicted_class][:-1].values.reshape(-1, 2)
-        print(f'Puntos clave para la clase {predicted_class}: {keypoints}')
-
-        # Escala los puntos clave a las dimensiones originales de la imagen
-        scaled_keypoints = keypoints * (original_width / 96, original_height / 96)
-
-        # Visualiza la imagen con los puntos clave
-        plt.imshow(img, cmap='gray')  # Usa la imagen original
-        for (x, y) in scaled_keypoints:
-            plt.plot(x, y, 'rx')  # Dibuja los puntos clave
-
-        # Guarda la imagen con los puntos clave en un buffer
-        buf = BytesIO()
-        plt.axis('off')
-        plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0)
-        plt.close()
-        buf.seek(0)
-
-        # Convierte la imagen a base64
-        img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-        result['image'] = f"data:image/png;base64,{img_base64}"
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        img = cv2.imread(filepath)
+    elif 'existing_file' in request.form:
+        filename = request.form['existing_file']
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        img = cv2.imread(filepath)
     else:
-        result['image'] = None
+        return jsonify({'error': 'No se ha proporcionado ninguna imagen.'}), 400
 
-    return jsonify(result), 200
+    # Convertir la imagen a escala de grises
+    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
+    # Detectar el rostro en la imagen
+    faces = face_cascade.detectMultiScale(gray_img, scaleFactor=1.1, minNeighbors=5)
+
+    if len(faces) == 0:
+        return jsonify({'error': 'No se detectaron rostros en la imagen.'}), 400
+
+    # Generar la imagen con puntos clave en el rostro
+    output = generate_image_with_keypoints(gray_img, faces)
+
+    # Convertir la imagen generada a base64 para enviarla en la respuesta
+    encoded_image = base64.b64encode(output.getvalue()).decode('utf-8')
+
+    return jsonify({'image': encoded_image})
+
+# Ruta para servir los archivos subidos
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+# Ejecuta la aplicación Flask
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=port)  # Asegúrate de que el puerto sea el correcto
+    # Iniciar un túnel ngrok en el puerto 5000
+    public_url = ngrok.connect(5000)
+    print(f" * ngrok URL: {public_url}")
+
+    # Ejecuta Flask en el puerto 5000
+    app.run(port=5000)
