@@ -55,3 +55,4 @@ wheel==0.44.0
 wrapt==1.16.0
 gunicorn==23.0.0
 mediapipe==0.10.15
+pyngrok>=0.4.1
