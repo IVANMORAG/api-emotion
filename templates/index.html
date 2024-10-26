@@ -3,80 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplicación de análisis facial</title>
+    <title>Face Recognition Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-</head>
-<body class="bg-gray-900 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
-        <h1 class="text-4xl font-bold text-center mb-8 text-white">Análisis facial</h1>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* Paleta de colores con fondo futurista */
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background-color: #1c1a29; /* Fondo de toda la página */
+            color: #e0d9f1;
+        }
+
+        /* Título con animación de brillo */
+        h1 {
+            color: #bb86fc;
+            text-transform: uppercase;
+            font-size: 20px;
+            animation: titleGlow 1.5s ease-in-out infinite alternate;
+        }
+
+        /* Animación de brillo en el título */
+        @keyframes titleGlow {
+            0% { text-shadow: 0 0 10px #bb86fc, 0 0 20px #bb86fc; }
+            100% { text-shadow: 0 0 20px #f48fb1, 0 0 30px #f48fb1; }
+        }
+
+        /* Fondo de la sección de carga de archivos */
+        .file-upload {
+            background-color: #312a45;
+            border: 2px dashed #bb86fc;
+        }
+
+        /* Imágenes circulares con fondo morado */
+        .uploaded-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: #2e2a4b;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+        }
+
+        /* Fondo morado personalizado para la sección de imágenes cargadas */
+        .custom-purple-bg {
+            background-color: #312a45; /* Color morado acorde a tu paleta */
+        }
+
+
+        /* Animación hover en imágenes */
+        .uploaded-image:hover {
+            transform: scale(1.1);
+            background-color: #3e3467;
+            box-shadow: 0 0 10px #bb86fc, 0 0 20px #f48fb1;
+        }
+
+        /* Botón con cambio de tono en hover */
+        .btn-analyze {
+            background-color: #bb86fc;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
         
-        <div class="max-w-2xl mx-auto bg-gray-800 rounded-lg shadow-xl p-6">
-            <!-- File Upload Section -->
-            <div class="mb-8">
-                <h2 class="text-2xl font-semibold mb-4 text-gray-200">Subir imagen</h2>
-                <form id="uploadForm" class="space-y-4">
-                    <div class="flex items-center justify-center w-full">
-                        <label class="flex flex-col w-full h-32 border-4 border-dashed border-gray-600 hover:border-gray-500 hover:bg-gray-700 rounded-lg">
-                            <div class="flex flex-col items-center justify-center pt-7">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-gray-400 group-hover:text-gray-300" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
-                                </svg>
-                                <p class="pt-1 text-sm tracking-wider text-gray-400 group-hover:text-gray-300">
-                                    Seleccione una imagen</p>
-                            </div>
-                            <input type="file" class="opacity-0" name="file" accept=".jpg,.jpeg,.png" />
-                        </label>
-                    </div>
-                    <button type="submit" class="w-full px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-                        Analizar imagen
+        .btn-analyze:hover {
+            background-color: #d488ff;
+            transform: scale(1.05);
+        }
+
+        /* Contenedores y alineación */
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            width: 100%;
+        }
+
+        .results-section {
+            grid-column: span 2;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* Estilo para el área de resultados */
+        #resultImage {
+            max-width: 50%; /* Tamaño reducido */
+            height: auto;
+            border-radius: 10px;
+            transition: box-shadow 0.3s ease, transform 0.2s ease;
+        }
+
+        #resultImage:hover {
+            box-shadow: 0 0 15px #d488ff, 0 0 30px #f48fb1;
+            transform: scale(1.05);
+        }
+
+        /* Estilo para los cursos con cambio de color en hover */
+        .course {
+            transition: background-color 0.3s ease;
+        }
+
+        .course:hover {
+            background-color: #5c4b8a; /* Cambia a un tono de morado al pasar el mouse */
+        }
+
+        /* Indicador de carga */
+        #loading .spinner {
+            border-top-color: #bb86fc;
+            border-right-color: #f48fb1;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-center mb-8">Face Recognition Portal</h1>
+    
+        <div class="main-content max-w-4xl mx-auto">
+    
+            <!-- Sección de Carga de Archivos -->
+            <div class="file-upload p-6 rounded-lg shadow-xl">
+                <h2 class="text-xl font-semibold mb-4 text-gray-200">Upload an Image</h2>
+                <form id="uploadForm" class="space-y-4" onsubmit="return handleFormSubmit(event)">
+                    <label class="flex flex-col items-center border-dashed border-gray-600 rounded-lg cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400 mb-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
+                        </svg>
+                        <p class="text-sm text-gray-400">Select an Image</p>
+                        <input type="file" class="opacity-0" name="file" accept=".jpg,.jpeg,.png" onchange="previewImage(event)" />
+                    </label>
+                    <button type="submit" class="btn-analyze w-full px-4 py-2 text-white rounded-lg focus:outline-none">
+                        Analyze Image
                     </button>
                 </form>
             </div>
-
-            <!-- Results Section -->
-            <div id="results" class="hidden">
-                <h2 class="text-2xl font-semibold mb-4 text-gray-200">Resultados del análisis</h2>
-                <div class="border border-gray-700 rounded-lg p-4 bg-gray-700">
-                    <img id="resultImage" class="max-w-full h-auto mx-auto" src="" alt="Analysis Result">
-                </div>
-            </div>
-
-            <!-- Loading Indicator -->
-            <div id="loading" class="hidden">
-                <div class="flex items-center justify-center p-4">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                </div>
-            </div>
-
-            <!-- Error Display -->
-            <div id="error" class="hidden mt-4 p-4 bg-red-900 border border-red-700 text-red-200 rounded-lg">
-            </div>
-
-            <!-- Existing Images Section -->
-            {% if images %}
-            <div class="mt-8">
-                <h2 class="text-2xl font-semibold mb-4 text-gray-200">Imágenes cargadas previamente</h2>
+            <div class="custom-purple-bg p-6 rounded-lg shadow-xl">
+                <h2 class="text-xl font-semibold mb-4 text-gray-200">Previously Uploaded Images</h2>
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {% for image in images %}
-                    <div class="relative group">
+                    <div class="flex flex-col items-center">
                         <img src="{{ url_for('uploaded_file', filename=image) }}" 
-                             alt="{{ image }}" 
-                             class="w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity"
-                             onclick="analyzeExisting('{{ image }}')">
-                        <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-gray-200 text-xs p-1 rounded-b-lg truncate">
-                            {{ image }}
-                        </div>
+                            alt="{{ image }}" 
+                            class="uploaded-image cursor-pointer"
+                            onclick="analyzeExisting('{{ image }}')">
+                        <button class="btn-analyze mt-2" onclick="confirmDelete('{{ image }}')">Eliminar</button>
                     </div>
                     {% endfor %}
                 </div>
             </div>
-            {% endif %}
-        </div>
-    </div>
-
+            
+            <!-- Sección de Resultados -->
+            <div id="results" class="results-section hidden mt-8">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-200">Analysis Results</h2>
+                <div class="border border-gray-700 rounded-lg p-4 bg-gray-700 relative flex flex-col items-center">
+                    <img id="resultImage" src="" alt="Analysis Result" class="max-w-full h-auto mb-4" style="display: none;">
+                    
+                    <div id="loading" class="hidden absolute flex items-center justify-center top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                        <div class="spinner animate-spin rounded-full h-16 w-16 border-b-2"></div>
+                    </div>
+                    
+                    <div id="error" class="hidden absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-4 bg-red-900 border border-red-700 text-red-200 rounded-lg text-lg z-10">
+                        <!-- Mensaje de error -->
+                    </div>
+                </div>
+            </div>
+       
     <script>
-        // Manejar la subida de nuevas imágenes
+        // AJAX para analizar imagen subida
         $('#uploadForm').submit(function (e) {
             e.preventDefault();
             const formData = new FormData(this);
@@ -102,42 +197,150 @@
             });
         });
 
-        // Manejar el análisis de imágenes existentes
         function analyzeExisting(filename) {
-            showLoading();
+    showLoading();
+    const formData = new FormData();
+    formData.append('existing_file', filename);
 
-            const formData = new FormData();
-            formData.append('existing_file', filename);
-
-            $.ajax({
-                url: '/analyze',
-                type: 'POST',
-                data: formData,
-                contentType: false,
-                processData: false,
-                success: function (response) {
-                    hideLoading();
-                    $('#results').removeClass('hidden');
-                    $('#resultImage').attr('src', 'data:image/png;base64,' + response.image);
-                },
-                error: function (xhr) {
-                    hideLoading();
-                    $('#error')
-                        .removeClass('hidden')
-                        .text(xhr.responseJSON?.error || 'An error occurred');
-                }
-            });
+    $.ajax({
+        url: '/analyze',
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function (response) {
+            hideLoading();
+            $('#results').removeClass('hidden');
+            $('#resultImage').attr('src', 'data:image/png;base64,' + response.image); // Cambia esto según la respuesta del servidor
+            $('#resultImage').css('display', 'block'); // Muestra la imagen
+        },
+        error: function (xhr) {
+            hideLoading();
+            $('#error')
+                .removeClass('hidden')
+                .text(xhr.responseJSON?.error || 'An error occurred');
         }
+    });
+    console.log("Analizando imagen:", filename);
+}
+// Supongamos que tienes una función que maneja la respuesta después del análisis
+function handleAnalysisResponse(response) {
+    console.log('Analizando imagen: caramora.jpg');
 
-        // Mostrar/ocultar la animación de carga
+    // Verifica si la respuesta contiene una URL válida para la imagen
+    if (response.imageUrl) {
+        // Actualiza el src de la imagen en el div de resultados
+        const resultImage = document.getElementById('resultImage');
+        resultImage.src = response.imageUrl;
+
+        // Muestra la imagen
+        resultImage.style.display = 'block'; // Muestra la imagen
+
+        // Muestra la sección de resultados
+        const resultsSection = document.getElementById('results');
+        resultsSection.classList.remove('hidden');
+    } else {
+        // Maneja el error si no hay URL
+        const errorDiv = document.getElementById('error');
+        errorDiv.textContent = 'Error al cargar la imagen de análisis.';
+        errorDiv.classList.remove('hidden');
+    }
+}
+
+        // Mostrar/Ocultar el indicador de carga
         function showLoading() {
             $('#loading').removeClass('hidden');
-            $('#results, #error').addClass('hidden');
         }
 
         function hideLoading() {
             $('#loading').addClass('hidden');
         }
+
+        function previewImage(event) {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        const imgElement = document.getElementById('resultImage');
+        imgElement.src = e.target.result;
+        imgElement.style.display = 'block'; // Mostrar la imagen
+        document.getElementById('results').classList.remove('hidden'); // Mostrar sección de resultados
+    };
+
+    if (file) {
+        reader.readAsDataURL(file);
+    }
+}
+
+function handleFormSubmit(event) {
+    event.preventDefault(); // Prevenir el envío del formulario
+    document.getElementById('loading').classList.remove('hidden'); // Mostrar el spinner
+    document.getElementById('error').classList.add('hidden'); // Ocultar errores
+
+    // Simular un análisis de imagen (reemplaza con tu lógica real)
+    setTimeout(() => {
+        document.getElementById('loading').classList.add('hidden'); // Ocultar el spinner
+        // Aquí podrías manejar la respuesta del análisis
+        // Si hay un error, muestra el mensaje de error
+        // document.getElementById('error').classList.remove('hidden'); // Descomentar para mostrar error
+    }, 2000); // Simulación de un análisis que dura 2 segundos
+}
+function deleteImage(filename) {
+    if (confirm('¿Estás seguro de que deseas eliminar esta imagen?')) {
+        $.ajax({
+            url: '/delete', // Cambia esta URL según tu configuración
+            type: 'POST',
+            data: { filename: filename },
+            success: function(response) {
+                // Aquí puedes manejar la respuesta después de la eliminación
+                alert('Imagen eliminada con éxito');
+                location.reload(); // Recargar la página para ver los cambios
+            },
+            error: function(xhr) {
+                alert('Ocurrió un error al intentar eliminar la imagen: ' + xhr.responseJSON?.error || 'Error desconocido');
+            }
+        });
+    }
+}
+function confirmDelete(filename) {
+    Swal.fire({
+        title: '¿Estás seguro?',
+        text: "¡Esta acción no se puede deshacer!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Crear un formulario para eliminar la imagen
+            const formData = new FormData();
+            formData.append('filename', filename);
+
+            // Hacer una solicitud AJAX para eliminar la imagen
+            fetch('/delete', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('Eliminado', 'La imagen ha sido eliminada.', 'success');
+                    // Eliminar la imagen del DOM
+                    document.querySelector(`img[src*="${filename}"]`).parentElement.remove();
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Error', 'Ocurrió un error al eliminar la imagen.', 'error');
+            });
+        }
+    });
+}
+
     </script>
 </body>
 </html>
