@@ -1,0 +1,107 @@
+/* Paleta de colores con fondo futurista */
+body {
+    font-family: 'Orbitron', sans-serif;
+    background-color: #1c1a29; /* Fondo de toda la página */
+    color: #e0d9f1;
+}
+
+/* Título con animación de brillo */
+h1 {
+    color: #bb86fc;
+    text-transform: uppercase;
+    font-size: 20px;
+    animation: titleGlow 1.5s ease-in-out infinite alternate;
+}
+
+/* Animación de brillo en el título */
+@keyframes titleGlow {
+    0% { text-shadow: 0 0 10px #bb86fc, 0 0 20px #bb86fc; }
+    100% { text-shadow: 0 0 20px #f48fb1, 0 0 30px #f48fb1; }
+}
+
+/* Fondo de la sección de carga de archivos */
+.file-upload {
+    background-color: #312a45;
+    border: 2px dashed #bb86fc;
+}
+
+/* Imágenes circulares con fondo morado */
+.uploaded-image {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background-color: #2e2a4b;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+/* Fondo morado personalizado para la sección de imágenes cargadas */
+.custom-purple-bg {
+    background-color: #312a45; /* Color morado acorde a tu paleta */
+}
+
+
+/* Animación hover en imágenes */
+.uploaded-image:hover {
+    transform: scale(1.1);
+    background-color: #3e3467;
+    box-shadow: 0 0 10px #bb86fc, 0 0 20px #f48fb1;
+}
+
+/* Botón con cambio de tono en hover */
+.btn-analyze {
+    background-color: #bb86fc;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.btn-analyze:hover {
+    background-color: #d488ff;
+    transform: scale(1.05);
+}
+
+/* Contenedores y alineación */
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    width: 100%;
+}
+
+.results-section {
+    grid-column: span 2;
+    text-align: center;
+    width: 100%;
+}
+
+/* Estilo para el área de resultados */
+#resultImage {
+    max-width: 50%; /* Tamaño reducido */
+    height: auto;
+    border-radius: 10px;
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+#resultImage:hover {
+    box-shadow: 0 0 15px #d488ff, 0 0 30px #f48fb1;
+    transform: scale(1.05);
+}
+
+/* Estilo para los cursos con cambio de color en hover */
+.course {
+    transition: background-color 0.3s ease;
+}
+
+.course:hover {
+    background-color: #5c4b8a; /* Cambia a un tono de morado al pasar el mouse */
+}
+
+/* Indicador de carga */
+#loading .spinner {
+    border-top-color: #bb86fc;
+    border-right-color: #f48fb1;
+}

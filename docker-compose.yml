@@ -1,0 +1,10 @@
+version: '3'
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app  # Esto sincroniza tu directorio local con el contenedor
+    environment:
+      - FLASK_ENV=development
